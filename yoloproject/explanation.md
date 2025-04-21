@@ -68,7 +68,18 @@ The GitHub repository:
 
 ---
 
-## 6. Best Practices
+## 6. DockerHub Images
+
+Below are screenshots showing the Docker images for both the frontend and backend, each tagged with `v2` as uploaded to DockerHub.
+
+### Frontend v2 Image
+![Frontend v2](./screenshotsdockerhub/frontendv2.png)
+
+### Backend v2 Image
+![Backend v2](./screenshotsdockerhub/backendv2.png)
+
+
+## 7. Best Practices
 
 - Used multi-stage builds for smaller, secure images.
 - Only essential files copied to production containers.
@@ -79,7 +90,7 @@ The GitHub repository:
 
 ---
 
-## 7. How to Run
+## 8. How to Run
 
 ```bash
 # Clone the repo
