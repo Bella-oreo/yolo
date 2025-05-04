@@ -1,0 +1,31 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# This Vagrantfile configures a virtual machine using Ubuntu 20.04 from Jeff Geerling
+# It sets up a private network, configures system resources, and optionally runs Ansible provisioner
+
+Vagrant.configure("2") do |config|
+  # Specify the Vagrant box to use (Ubuntu 20.04 by Jeff Geerling)
+  config.vm.box = "geerlingguy/ubuntu2004"
+
+  # Assign a private network IP so the VM is accessible via this IP
+  config.vm.network "private_network", ip: "192.168.56.10"
+
+  # Sync the current folder (where the Vagrantfile is) to /vagrant in the VM
+  config.vm.synced_folder ".", "/vagrant"
+
+  # Provider-specific configuration (VirtualBox)
+  config.vm.provider "virtualbox" do |vb|
+    # Allocate 1024 MB of RAM to the VM
+    vb.memory = "1024"
+
+    # Use 2 CPU cores for the VM
+    vb.cpus = 2
+  end
+
+  # Provision the VM using a local Ansible playbook (optional)
+  # This expects a playbook.yml file in the synced folder
+  config.vm.provision "ansible_local" do |ansible|
+    ansible.playbook = "/vagrant/playbook.yml"
+  end
+end
