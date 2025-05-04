@@ -1,0 +1,21 @@
+app_network: app-net
+
+frontend_name: yolo-frontend
+frontend_image: bellandirangu/frontend:v2
+frontend_port: 3000
+
+backend_name: yolo-backend
+backend_image: bellandirangu/backend:v2
+backend_port: 5000
+
+mongo_name: app-mongo
+mongo_image: mongo
+mongo_port: 27017
+mongo_volume: app-mongo-data
+
+docker_network:
+  name: app-net
+  subnet: 172.20.0.0/16
+  ip_range: 172.20.0.0/16
+
+

@@ -1,0 +1,12 @@
+- name: Create backend container
+  community.docker.docker_container:
+    name: "{{ backend_name }}"
+    image: "{{ backend_image }}"
+    state: started
+    ports:
+      - "{{ backend_port }}:{{ backend_port }}"
+    networks:
+      - name: "{{ app_network }}"
+    volumes: []
+    env:
+      MONGO_URL: "mongodb://{{ mongo_name }}:{{ mongo_port }}"

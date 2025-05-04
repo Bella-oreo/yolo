@@ -1,0 +1,10 @@
+---
+- name: Create frontend container
+  community.docker.docker_container:
+    name: "yolo-frontend"
+    image: "bellandirangu/frontend:v2"
+    ports:
+      - "3000:3000"
+    networks:
+      - name: "app-net"
+

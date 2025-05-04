@@ -1,0 +1,13 @@
+- name: Create mongo container
+  community.docker.docker_container:
+    name: "{{ mongo_name }}"
+    image: "{{ mongo_image }}"
+    state: started
+    ports:
+      - "{{ mongo_port }}:{{ mongo_port }}"
+    volumes:
+      - "{{ mongo_volume }}:/data/db"
+    networks:
+      - name: "{{ app_network }}"
+
+

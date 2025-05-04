@@ -1,0 +1,19 @@
+---
+- name: Configure Vagrant VM
+  hosts: vagrant
+  tasks:
+    - name: Update all packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Ensure Docker is running
+      service:
+        name: docker
+        state: started
+        enabled: yes

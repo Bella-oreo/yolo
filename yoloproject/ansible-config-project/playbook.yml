@@ -1,19 +1,12 @@
-- name: Test Ansible Playbook
-  hosts: all
+- name: Deploy YOLO Application Stack
+  hosts: localhost
+  connection: local
   become: true
+  become_method: sudo
 
-  tasks:
-   - name: Update apt package cache
-     apt:
-      update_cache: yes
+  roles:
+    - nginx
+    - mongo
+    - backend
+    - frontend
 
-   - name: Install Nginx
-     apt:
-       name: nginx
-       state: present
-
-   - name: Ensure Nginx is running
-     service:
-      name: nginx
-      state: started
-      enabled: true

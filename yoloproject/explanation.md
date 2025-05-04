@@ -79,7 +79,43 @@ Below are screenshots showing the Docker images for both the frontend and backen
 ![Backend v2](./screenshotsdockerhub/backendv2.png)
 
 
-## 7. Best Practices
+## 7.  Key Progress (May 5)
+<!--  Docker Work -->
+Cleaned up Dockerfiles
+
+Rebuilt and pushed updated images to DockerHub (v3)
+
+Confirmed full local deployment using docker-compose
+
+<!-- Ansible Implementation (New Today!) -->
+<!-- Created Ansible Playbooks & Roles: -->
+Role-based structure: roles/client, roles/backend, roles/mongo
+
+Each role contains tasks, handlers, and templates as needed
+
+<!-- Configured group_vars: -->
+
+Separated variables for each host group
+
+Used .env-like structure to centralize config
+
+<!-- Ran Ansible Playbook: -->
+
+Used ansible-playbook site.yml to set up and configure containers automatically
+
+Verified each container was built, configured, and started successfully
+
+<!-- Benefits: -->
+
+Easy repeatable deployment across environments
+
+Centralized config and clear infrastructure-as-code (IaC) structure
+
+Prepared for future use with remote servers or cloud instances
+
+
+
+## 8. Best Practices
 
 - Used multi-stage builds for smaller, secure images.
 - Only essential files copied to production containers.
@@ -90,13 +126,71 @@ Below are screenshots showing the Docker images for both the frontend and backen
 
 ---
 
-## 8. How to Run
+## 9. How to Run locally
 
-```bash
-# Clone the repo
-git clone <your-repo-url>
+'''bash
+# Clone the project
+git clone https://github.com/Bella-oreo/yoloproject.git
 cd yoloproject
 
-# Start all services
+# Start services using Docker Compose
 docker-compose up --build
+
+## Access the app:
+
+Frontend: http://localhost:3000
+
+Backend API: http://localhost:5000 -->
+
+
+# Stage 2 Explanation: Ansible & Terraform Instrumentation
+
+## Objective:
+The goal of **Stage 2** was to integrate **Terraform** and **Ansible** to provision and configure the infrastructure and application. By the end of this stage, the entire setup process is automated using a single command that provisions the environment and deploys the application.
+
+## Workflow:
+The **Terraform** module provisions the infrastructure and creates the server (VM), while **Ansible** is used for configuring the server, deploying Docker containers, and setting up the web application.
+
+### 1. **Terraform Setup**:
+- **Resources Provisioned**: We used Terraform to provision a VM on which the application will run. Terraform handles the initial infrastructure setup and ensures that the required environment (VM) is created.
+  
+- **Terraform Provisioner for Ansible**: Terraform doesn't have a native provisioner for Ansible. To overcome this, used the **remote-exec** provisioner within Terraform to trigger the execution of the Ansible playbook once the resources have been provisioned.
+
+  - **Terraform Configuration**: The `main.tf` file contains the configurations for provisioning the VM, setting up the network, and defining the provisioning behavior using **remote-exec**.
+
+### 2. **Ansible Playbook Setup**:
+- The **Ansible playbook** is responsible for configuring the newly provisioned resources (VM) and deploying the e-commerce web application.
+  
+- **Roles**:
+  - **Docker Role**: Configures Docker on the VM.
+  - **App Role**: Deploys the e-commerce application and ensures all services are running correctly in their respective Docker containers.
+  
+- **Variables**: Variables were used for flexibility and reusability across the playbook. For example, container images and ports can be easily changed using variables defined in the `variables.yml` file.
+
+### 3. **Playbook Execution**:
+- After provisioning the VM using **Vagrant** and **Terraform**, the Ansible playbook is executed:
+    ```bash
+    ansible-playbook ../ansible/playbook.yml -i ../ansible/inventory.ini
+    ```
+
+- The playbook ensures that the web application is deployed and accessible on the browser. This includes configuring Docker containers for each component of the application.
+
+### 4. **Role of Each Task**:
+- **Docker Configuration**: Ensures that Docker is installed and configured to run containers for the web application.
+- **Application Deployment**: Deploys the containers (web app, database, etc.) using Docker commands specified in the Ansible playbook.
+
+### Key Modules and Concepts Used:
+- **Variables**: Used in the playbook for defining reusable values such as container names, images, and ports.
+- **Roles**: Used to modularize tasks, making it easier to manage and scale the playbook.
+- **Blocks**: Grouped tasks into blocks to handle exceptions or failures.
+- **Tags**: Added tags to tasks for targeted execution.
+  
+### Explanation for Role Order in the Playbook:
+1. **Docker Setup**: Docker must be set up first because all containers depend on it.
+2. **App Setup**: Once Docker is running, the application can be deployed within containers.
+3. **Service Verification**: After deployment, the services are verified to ensure the application is running as expected.
+
+### Conclusion:
+This stage automated the entire environment setup, from provisioning to configuration and deployment, using **Terraform** for infrastructure and **Ansible** for configuration management. The project is now ready for deployment with a single command to provision and configure the server and launch the application.
+
 
