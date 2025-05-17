@@ -1,196 +1,116 @@
-# Explanation of Docker Implementation for YOLO E-commerce App
+# Explanation of YOLO Project Implementation
 
-## 1. Choice of Base Images
-
-### Backend
-- **Build Stage:** Uses `node:14` because it is stable and compatible with the backend dependencies.
-- **Production Stage:** Uses `alpine:3.16.7`, a minimal and secure Linux distribution. This reduces image size and attack surface.
-
-### Frontend
-- Similar multi-stage approach using `node:14-slim` in the build stage and `alpine:3.16.7` for production. This setup ensures smaller image size and faster deployments.
+This document details the architectural and orchestration choices made throughout the YOLO e-commerce platform development—including Docker, Ansible, and Kubernetes stages—to satisfy the Week 5 assignment requirements.
 
 ---
 
-## 2. Dockerfile Directives
+## 1. Docker Implementation
 
-Each service has a multi-stage Dockerfile with the following structure:
+### 1.1 Base Images and Multi-Stage Builds
 
-### Build Stage
-- `FROM node:14` or `node:14-slim`: Ensures dependency compatibility.
-- `WORKDIR /usr/src/app`: Sets working directory.
-- `COPY package*.json ./` and `RUN npm install`: Installs only the necessary dependencies.
-- `COPY . .`: Adds the full source code for build.
+* **Backend Dockerfile**
 
-### Production Stage
-- `FROM alpine:3.16.7`: Starts clean environment.
-- `RUN apk add --no-cache nodejs npm`: Adds Node.js only for runtime.
-- `COPY --from=build`: Brings in the fully built app.
-- `EXPOSE`: Opens relevant ports (`3000` for frontend, `5000` for backend).
-- `CMD`: Starts the server with `node server.js` or `npm start`.
+  * **Build Stage** (`node:14`): Ensures compatibility with project dependencies and fast build times.
+  * **Production Stage** (`alpine:3.16.7`): Minimizes image size and attack surface by installing only the Node.js runtime (`apk add --no-cache nodejs npm`).
+* **Frontend Dockerfile**
 
----
+  * **Build Stage** (`node:14-slim`): Lightweight image for React builds.
+  * **Production Stage** (`alpine:3.16.7`): Hosts the static frontend assets served by a minimal HTTP server.
 
-## 3. Docker Compose Setup
+### 1.2 Key Directives
 
-`docker-compose.yml` orchestrates the application as three services:
+* `WORKDIR /usr/src/app`, `COPY package*.json`, `RUN npm install`, then `COPY . .` for reproducible builds.
+* `EXPOSE 5000` (backend) and `EXPOSE 3000` (frontend).
+* `CMD` to start servers (`node server.js` or `npm start`).
 
-- `brian-yolo-client`: Frontend React app
-- `brian-yolo-backend`: Node.js backend service
-- `app-ip-mongo`: MongoDB service
+### 1.3 Docker Compose
 
-### Key Features
-- **Networking:** Uses a custom bridge network (`app-net`) for isolated, internal communication.
-- **Volumes:** MongoDB data is persisted using named volumes (`app-mongo-data`).
-- **Ports:** Services are exposed via:
-  - Frontend: `localhost:3000`
-  - Backend: `localhost:5000`
-  - MongoDB: `localhost:27017`
+* Defines three services:
 
----
+  * `bellandirangu/client`: Frontend React application.
+  * `bellandirangu/backend`: Node.js API.
+  * `mongo`: MongoDB database.
+* **Networking**: Custom bridge network (`app-net`) isolates services.
+* **Volumes**: Named volume `app-mongo-data` persists database storage locally.
+* **Port Mapping**: 3000→3000 (frontend), 5000→5000 (backend), 27017→27017 (MongoDB).
 
-## 4. DockerHub Integration
+### 1.4 DockerHub Integration
 
-The Docker images were built locally and pushed to DockerHub:
-
-- `bellandirangu/backend:v1`
-- `bellandirangu/frontend:v1`
-
-This allows anyone to deploy without cloning the full repo by pulling these images and using the `docker-compose.yml`.
+* Images tagged and pushed: `bellandirangu/backend:v2`, `bellandirangu/frontend:v2`. Enables direct pulls in production.
 
 ---
 
-## 5. Git Workflow and Tags
+## 2. Ansible Automation
 
-The GitHub repository:
-- Includes all relevant files: Dockerfiles, `docker-compose.yml`, and this explanation.
-- Uses meaningful commit messages and a tagged release (`v1.0.0`) for versioning.
-- All changes were committed and pushed after building and verifying Docker images.
+### 2.1 Playbook and Roles
 
----
+* **Inventory & Group Vars**: Centralized configuration via `inventory.yml` and `group_vars/all.yml`.
+* **Roles**: Modular structure
 
-## 6. DockerHub Images
+  * `roles/backend`: Builds and deploys backend container.
+  * `roles/frontend`: Builds and deploys frontend container.
+  * `roles/mongo`: Sets up MongoDB service and data directory.
+  * `roles/nginx`: Configures reverse proxy or static file serving as needed.
 
-Below are screenshots showing the Docker images for both the frontend and backend, each tagged with `v2` as uploaded to DockerHub.
+### 2.2 Repeatable Deployment
 
-### Frontend v2 Image
-![Frontend v2](./screenshotsdockerhub/frontendv2.png)
-
-### Backend v2 Image
-![Backend v2](./screenshotsdockerhub/backendv2.png)
-
-
-## 7.  Key Progress (May 5)
-<!--  Docker Work -->
-Cleaned up Dockerfiles
-
-Rebuilt and pushed updated images to DockerHub (v3)
-
-Confirmed full local deployment using docker-compose
-
-<!-- Ansible Implementation (New Today!) -->
-<!-- Created Ansible Playbooks & Roles: -->
-Role-based structure: roles/client, roles/backend, roles/mongo
-
-Each role contains tasks, handlers, and templates as needed
-
-<!-- Configured group_vars: -->
-
-Separated variables for each host group
-
-Used .env-like structure to centralize config
-
-<!-- Ran Ansible Playbook: -->
-
-Used ansible-playbook site.yml to set up and configure containers automatically
-
-Verified each container was built, configured, and started successfully
-
-<!-- Benefits: -->
-
-Easy repeatable deployment across environments
-
-Centralized config and clear infrastructure-as-code (IaC) structure
-
-Prepared for future use with remote servers or cloud instances
-
-
-
-## 8. Best Practices
-
-- Used multi-stage builds for smaller, secure images.
-- Only essential files copied to production containers.
-- Network isolation with a custom Docker bridge.
-- Clear port mapping for local development.
-- Persistent storage for database using Docker volumes.
-- Docker Compose for simplified orchestration and reproducibility.
+* `ansible-playbook playbook.yml` provisions all services on local Vagrant or remote hosts.
+* Ensures consistent environment across developers and CI/CD pipelines.
 
 ---
 
-## 9. How to Run locally
+## 3. Kubernetes Orchestration on GKE
 
-'''bash
-# Clone the project
-git clone https://github.com/Bella-oreo/yoloproject.git
-cd yoloproject
+### 3.1 Kubernetes Objects
 
-# Start services using Docker Compose
-docker-compose up --build
+* **StatefulSet (MongoDB)**
 
-## Access the app:
+  * Uses `volumeClaimTemplates` to dynamically provision a **PersistentVolumeClaim** (PVC) of 1Gi with `standard` StorageClass.
+  * **Headless Service** (`mongo-service`, `clusterIP: None`) provides stable DNS (`mongo-0.mongo-service`) for the database pod.
+* **Deployments**
 
-Frontend: http://localhost:3000
+  * **Backend Deployment**: Single replica, connected to `mongo-0.mongo-service:27017`, configured via environment variables `MONGODB_URL` and `DB_NAME`.
+  * **Frontend Deployment**: Hosts static React build, configures environment variable `REACT_APP_API_URL` to connect to `backend-service:5000`.
+* **Services**
 
-Backend API: http://localhost:5000 -->
+  * `backend-service` (ClusterIP): Exposes port 5000 internally for frontend.
+  * `frontend-service` (LoadBalancer): Exposes port 80 externally, assigning a public IP on GKE.
 
+### 3.2 Persistent Storage Validation
 
-# Stage 2 Explanation: Ansible & Terraform Instrumentation
+* **Test Workflow**:
 
-## Objective:
-The goal of **Stage 2** was to integrate **Terraform** and **Ansible** to provision and configure the infrastructure and application. By the end of this stage, the entire setup process is automated using a single command that provisions the environment and deploys the application.
+  1. Insert a test record into `db.products` using a one-off Mongo client container.
+  2. Delete the `mongo-0` pod (`kubectl delete pod mongo-0`).
+  3. Upon restart, query `db.products.find().pretty()`—the test record persists, confirming PVC durability.
 
-## Workflow:
-The **Terraform** module provisions the infrastructure and creates the server (VM), while **Ansible** is used for configuring the server, deploying Docker containers, and setting up the web application.
+### 3.3 Service Exposure
 
-### 1. **Terraform Setup**:
-- **Resources Provisioned**: We used Terraform to provision a VM on which the application will run. Terraform handles the initial infrastructure setup and ensures that the required environment (VM) is created.
-  
-- **Terraform Provisioner for Ansible**: Terraform doesn't have a native provisioner for Ansible. To overcome this, used the **remote-exec** provisioner within Terraform to trigger the execution of the Ansible playbook once the resources have been provisioned.
+* **Frontend**: Accessible at `http://<EXTERNAL_IP>`, where `<EXTERNAL_IP>` is the LoadBalancer address of `frontend-service`.
+* **Backend**: Accessible within the cluster via `backend-service:5000` (frontend uses this).
 
-  - **Terraform Configuration**: The `main.tf` file contains the configurations for provisioning the VM, setting up the network, and defining the provisioning behavior using **remote-exec**.
+---
 
-### 2. **Ansible Playbook Setup**:
-- The **Ansible playbook** is responsible for configuring the newly provisioned resources (VM) and deploying the e-commerce web application.
-  
-- **Roles**:
-  - **Docker Role**: Configures Docker on the VM.
-  - **App Role**: Deploys the e-commerce application and ensures all services are running correctly in their respective Docker containers.
-  
-- **Variables**: Variables were used for flexibility and reusability across the playbook. For example, container images and ports can be easily changed using variables defined in the `variables.yml` file.
+## 4. Git Workflow and Versioning
 
-### 3. **Playbook Execution**:
-- After provisioning the VM using **Vagrant** and **Terraform**, the Ansible playbook is executed:
-    ```bash
-    ansible-playbook ../ansible/playbook.yml -i ../ansible/inventory.ini
-    ```
+* **Branching**: Single `main` branch with feature commits.
+* **Commits**: Over 10 descriptive commits, including:
 
-- The playbook ensures that the web application is deployed and accessible on the browser. This includes configuring Docker containers for each component of the application.
+  * `Add multi-stage Dockerfiles`
+  * `Integrate Docker Compose`
+  * `Add Ansible roles for backend/frontend/mongo`
+  * `Deploy MongoDB StatefulSet with PVC`
+  * `Fix backend DB connection to use env vars`
+  * `Update README and explanation.md`
+* **Tags**: `v1.0.0` for initial Docker release, `v2.0.0` for Ansible integration, `v3.0.0` for Kubernetes deployment.
 
-### 4. **Role of Each Task**:
-- **Docker Configuration**: Ensures that Docker is installed and configured to run containers for the web application.
-- **Application Deployment**: Deploys the containers (web app, database, etc.) using Docker commands specified in the Ansible playbook.
+---
 
-### Key Modules and Concepts Used:
-- **Variables**: Used in the playbook for defining reusable values such as container names, images, and ports.
-- **Roles**: Used to modularize tasks, making it easier to manage and scale the playbook.
-- **Blocks**: Grouped tasks into blocks to handle exceptions or failures.
-- **Tags**: Added tags to tasks for targeted execution.
-  
-### Explanation for Role Order in the Playbook:
-1. **Docker Setup**: Docker must be set up first because all containers depend on it.
-2. **App Setup**: Once Docker is running, the application can be deployed within containers.
-3. **Service Verification**: After deployment, the services are verified to ensure the application is running as expected.
+## 5. Best Practices Applied
 
-### Conclusion:
-This stage automated the entire environment setup, from provisioning to configuration and deployment, using **Terraform** for infrastructure and **Ansible** for configuration management. The project is now ready for deployment with a single command to provision and configure the server and launch the application.
+* **Security**: Minimal base images (`alpine`), environment variables for secrets (configured via Kubernetes Secrets if extended).
+* **Reliability**: Kubernetes liveness/readiness omitted for simplicity in class, but recommended for production.
+* **Maintainability**: Clear folder structure, modular Ansible roles, and reusable Kubernetes manifests.
+* **Documentation**: `README.md` for usage, `explanation.md` for implementation rationale.
 
-
+*Developed by Bella Ndirangu*

@@ -1,96 +1,147 @@
-# 🐳 YOLO E-commerce Platform - Containerized with Docker
+# 🐳 YOLO E-commerce Platform - Full-Stack Containerized & Kubernetes-Orchestrated
 
-> This project containerizes a full-stack e-commerce application using Docker and Docker Compose. It includes a frontend, backend (Node.js + Express), and a MongoDB database, all orchestrated through Docker Compose.
-
----
-
-## 📦 Project Structure
-
-
-yoloproject/ │ ├── backend/ # Node.js Express backend ├── frontend/ # React frontend ├── mongo/ # MongoDB Docker volume ├── Dockerfile (backend) # Inside /backend ├── Dockerfile (frontend)# Inside /frontend ├── docker-compose.yml ├── README.md ├── explanation.md └── screenshotsdockerhub/ ├── frontendv2.png └── backendv2.png
-
+> A robust e-commerce application featuring a React frontend, Node.js + Express backend, and MongoDB. Fully containerized with Docker and Docker Compose, automated with Ansible, and orchestrated on Google Kubernetes Engine (GKE) using Kubernetes best practices.
 
 ---
 
-## 🔧 Requirements
+## 📁 Repository Structure
 
-- Docker installed: [Get Docker](https://docs.docker.com/get-docker/)
-- Docker Compose installed (included with Docker Desktop)
-- Git (for cloning the repository)
+```
+yoloproject/
+├── backend/                   # Node.js + Express backend
+│   └── Dockerfile             # Backend container configuration
+├── frontend/                  # React frontend application
+│   └── Dockerfile             # Frontend container configuration
+├── kubernetesFolder/          # Kubernetes manifests for GKE
+│   ├── mongo-statefulset.yaml  # StatefulSet + PVC for MongoDB
+│   ├── mongo-service.yaml      # Headless Service for MongoDB
+│   ├── backend-deployment.yaml # Deployment for backend
+│   ├── backend-service.yaml    # ClusterIP Service for backend
+│   ├── frontend-deployment.yaml# Deployment for frontend
+│   └── frontend-service.yaml   # LoadBalancer Service for frontend
+├── docker-compose.yml         # Manual Docker orchestration
+├── inventory.yml              # Ansible inventory
+├── playbook.yml               # Ansible automation playbook
+├── roles/                     # Ansible roles (mongo, backend, frontend, nginx)
+├── explanation.md             # Detailed design & implementation rationale
+└── README.md                  # Project overview & setup instructions
+```
 
 ---
 
-## 🚀 Setup & Run the App
+## 🔄 Recent Updates & Key Workflows
 
-### Clone the Repository
+1. **Docker & DockerHub**
+
+   * Multi-stage Dockerfiles for backend (`node:14` → `alpine:3.16.7`) and frontend (`node:14-slim` → `alpine:3.16.7`).
+   * Images built and pushed: `bellandirangu/backend:v3`, `bellandirangu/frontend:v3`.
+
+2. **Docker Compose**
+
+   * Local orchestration with named volume (`app-mongo-data`) for MongoDB persistence.
+   * Custom `app-net` network isolates containers.
+
+3. **Ansible Automation**
+
+   * Roles for each service; `ansible-playbook playbook.yml` provisions all containers reproducibly.
+
+4. **Kubernetes on GKE**
+
+   * **MongoDB StatefulSet** with `volumeClaimTemplates` (1Gi PVC, `standard` StorageClass).
+   * **Headless Service** (`clusterIP: None`) provides stable DNS (`mongo-0.mongo-service`).
+   * **Backend/Frontend Deployments**: Configured env vars for service discovery and scaled via ReplicaSets.
+   * **Services**: `backend-service` (ClusterIP) internal, `frontend-service` (LoadBalancer) external.
+
+5. **Persistence Testing**
+
+   * Verified PVC durability by inserting test document, deleting `mongo-0`, and confirming data remained.
+
+6. **Documentation & Git Workflow**
+
+   * Over 10 descriptive commits covering Docker builds, Ansible integration, Kubernetes deployment, and fixes.
+   * Version tags: `v1.0.0` (Docker), `v2.0.0` (Ansible), `v3.0.0` (Kubernetes).
+
+---
+
+## 🛠 Prerequisites
+
+* [Docker](https://docs.docker.com/get-docker/)
+* Docker Compose
+* [kubectl](https://kubernetes.io/docs/tasks/tools/) configured for GKE
+* [gcloud CLI](https://cloud.google.com/sdk)
+* Ansible (v2.9+)
+* Git
+
+---
+
+## 🚀 Quickstart
+
+### 1. Clone & Navigate
 
 ```bash
-git clone https://github.com/Bella-oreo/yoloproject.git 
+git clone https://github.com/Bella-oreo/yolo
 cd yoloproject
+```
 
-### Build and Start the Containers
+### 2. Local Docker Compose (Optional)
 
+```bash
 docker-compose up --build
+```
 
+Access:
 
-###Access the App
+* Frontend: `http://localhost:3000`
+* Backend: `http://localhost:5000`
 
-Frontend: http://localhost:3000
+### 3. Automated Provisioning with Ansible (Optional)
 
-Backend-API: http://localhost:5000
+```bash
+ansible-playbook -i inventory.yml playbook.yml
+```
 
+### 4. Deploy to GKE
 
-#DockerHub Images
-Frontend: bellandirangu/frontend:v2
+1. Configure context:
 
-Backend: bellandirangu/backend:v2
+   ```bash
+   ```
 
-#DockerHub screenshots
-Located in /screenshotsdockerhub:
+gcloud container clusters get-credentials \<CLUSTER\_NAME> --zone <ZONE>
 
-frontendv2.png
+````
+2. Apply Kubernetes manifests:
+   ```bash
+kubectl apply -f kubernetesFolder/mongo-statefulset.yaml
+kubectl apply -f kubernetesFolder/mongo-service.yaml
+kubectl apply -f kubernetesFolder/backend-deployment.yaml
+kubectl apply -f kubernetesFolder/backend-service.yaml
+kubectl apply -f kubernetesFolder/frontend-deployment.yaml
+kubectl apply -f kubernetesFolder/frontend-service.yaml
+````
 
-backendv2.png
+3. Verify resources:
 
-#Add Product(Feature Demo)
-You can add a new product by clicking the “Add Product” button on the homepage. This tests the MongoDB integration and ensures data persistence across container restarts.
+   ```bash
+   ```
 
+kubectl get statefulsets,pods,svc
 
-#Docker Compose Configuration
-Uses a custom bridge network for seamless communication between services
+````
+4. Retrieve frontend external IP:
+   ```bash
+kubectl get svc frontend-service
+````
 
-MongoDB data persists through volumes
-
-Ports:
-
-Frontend → 3000:3000
-
-Backend → 5000:5000
-
-MongoDB → 27017:27017
-
-#Versioning & Tagging
-docker build -t bellandirangu/frontend:v2 .
-docker build -t bellandirangu/backend:v2 .
-docker push bellandirangu/frontend:v2
-docker push bellandirangu/backend:v2
-
-#Git Workflow
-Forked the base repo
-
-Created meaningful commits for each step
-
-Documented changes
-
-Followed folder structure conventions
-
-Total commits: 10+ with clear descriptions
-
-
-#License
-This project is part of the Docker containerization independent project and is for educational use.
-
-Built by Bella Naswa Ndirangu
+Access the app at `http://<EXTERNAL_IP>`.
 
 ---
 
+## 📝 Documentation
+
+* **Project Overview & Setup:** `README.md` (this file)
+* **Implementation Rationale:** `explanation.md`
+
+---
+
+*Developed by Bella Naswa Ndirangu*
